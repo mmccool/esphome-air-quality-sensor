@@ -6,7 +6,7 @@ Radio is used as a bluetooth Proxy (allowing, for example, access to data from n
 
 Case design is up to you.  I smacked something together with Makeblock, a scrap of wood, and some window screen (to camoflauge it a bit while still allowing free airflow).
 
-NOTE: There is currently and annoying bug in the PM device support so that when it first comes up after a power-on it is listed as "failed" and returns nonsense
+NOTE: There is currently an annoying bug in the PM device support so that when it first comes up after a power-on it is listed as "failed" and returns nonsense
 huge values.  This seems to be a start-up timing issue, as reinstalling the code (which reboots the ESP32 without powering off the PM sensor) works just fine.
 I think the PM sensor just needs time to warm up before the ESP32 trys to use it, and the ESPHome code is not waiting long enough before giving up on it.
 
