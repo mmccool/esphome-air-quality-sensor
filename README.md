@@ -5,3 +5,7 @@ Computes AQI using PM data.
 Radio is used as a bluetooth Proxy (allowing, for example, access to data from nearby Inkbird temperature sensors).
 
 To do: Add a gas sensor for CO, Ozone, VOC, etc.
+
+![Components mounted inside "case"](IMAGES/aqi1.jpg)
+
+![Case mounted inside top of bookshelf](IMAGES/aqi2.jpg)
