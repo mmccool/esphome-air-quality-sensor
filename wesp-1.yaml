@@ -1,0 +1,223 @@
+substitutions:
+  devicename: "wesp-1"
+  prefixname: wesp_1
+
+esphome:
+  name: "wesp-1"
+  friendly_name: wesp-1
+  min_version: 2024.11.0
+  name_add_mac_suffix: false
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+# Allow Over-The-Air updates
+ota:
+- platform: esphome
+
+# Enable BLE Tracker - needed for bluetooth proxy
+esp32_ble_tracker:
+
+# Enable bluetooth and bluetooth proxy
+bluetooth_proxy:
+
+# Enable I2C on QWIC
+i2c:
+  - id: bus_a
+    sda: GPIO15
+    scl: GPIO04
+    scan: true
+
+# Sensors
+sensor:
+    # Temperature, Pressure, Humidity
+  - platform: bme280_i2c
+    temperature:
+      name: ${prefixname} BME280 Temperature
+      state_class: measurement
+    pressure:
+      name: ${prefixname} BME280 Pressure
+      state_class: measurement
+      id: bme_pressure
+    humidity:
+      name: ${prefixname} BME280 Humidity
+      state_class: measurement
+
+    # Particulate
+  - platform: pmsa003i
+    pm_1_0:
+      name: ${prefixname} PM1.0
+    pm_2_5:
+      name: ${prefixname} PM2.5
+      id: ${prefixname}_pm_2_5
+      state_class: measurement
+    pm_10_0:
+      name: ${prefixname} PM10.0
+      id: ${prefixname}_pm_10_0
+      state_class: measurement
+    pmc_0_3:
+      name: ${prefixname} PMC >0.3µm
+      state_class: measurement
+    pmc_0_5:
+      name: ${prefixname} PMC >0.5µm
+      state_class: measurement
+    pmc_1_0:
+      name: ${prefixname} PMC >1µm
+      state_class: measurement
+    pmc_2_5:
+      name: ${prefixname} PMC >2.5µm
+      state_class: measurement
+    pmc_5_0:
+      name: ${prefixname} PMC >5µm
+      state_class: measurement
+    pmc_10_0:
+      name: ${prefixname} PMC >10µm
+      state_class: measurement
+
+    # AQI (currently based only on PM2.5 and PM10)
+  - platform: template
+    name: ${prefixname} Air Quality Index
+    lambda: |-
+      float pm_2_5 = id(${prefixname}_pm_2_5).state;
+      int aqi_pm_2_5;
+      if (isnan(pm_2_5))        aqi_pm_2_5 = 0;
+      else if (pm_2_5 <=   9.0) aqi_pm_2_5 =   0 + (int)(0.5 + (pm_2_5 -   0.0)*(( 50.0 -   0.0)/(  9.0 -   0.0)));
+      else if (pm_2_5 <=  35.4) aqi_pm_2_5 =  51 + (int)(0.5 + (pm_2_5 -   9.1)*((100.0 -  51.0)/( 35.4 -   9.1)));
+      else if (pm_2_5 <=  55.4) aqi_pm_2_5 = 101 + (int)(0.5 + (pm_2_5 -  35.5)*((150.0 - 101.0)/( 55.4 -  35.5)));
+      else if (pm_2_5 <= 125.4) aqi_pm_2_5 = 151 + (int)(0.5 + (pm_2_5 -  55.5)*((200.0 - 151.0)/(125.4 -  55.5)));
+      else if (pm_2_5 <= 225.4) aqi_pm_2_5 = 201 + (int)(0.5 + (pm_2_5 - 125.5)*((300.0 - 201.0)/(225.4 - 125.5)));
+      else                      aqi_pm_2_5 = 301 + (int)(0.5 + (pm_2_5 - 250.5)*((500.0 - 301.0)/(325.4 - 225.5)));
+
+      float pm_10_0 = id(${prefixname}_pm_10_0).state;
+      int aqi_pm_10_0;
+      if (isnan(pm_2_5))         aqi_pm_2_5 = 0;
+      else if (pm_10_0 <=  54.0) aqi_pm_10_0 =   0 + (int)(0.5 + (pm_10_0 -   0.0)*(( 50.0 -   0.0)/( 54.0 -   0.0)));
+      else if (pm_10_0 <= 154.0) aqi_pm_10_0 =  51 + (int)(0.5 + (pm_10_0 -  55.0)*((100.0 -  51.0)/(154.0 -  55.0)));
+      else if (pm_10_0 <= 254.0) aqi_pm_10_0 = 101 + (int)(0.5 + (pm_10_0 - 155.0)*((150.0 - 101.0)/(254.0 - 155.0)));
+      else if (pm_10_0 <= 354.0) aqi_pm_10_0 = 151 + (int)(0.5 + (pm_10_0 - 255.0)*((200.0 - 151.0)/(354.0 - 255.0)));
+      else if (pm_10_0 <= 424.0) aqi_pm_10_0 = 201 + (int)(0.5 + (pm_10_0 - 355.0)*((300.0 - 201.0)/(424.0 - 355.0)));
+      else                       aqi_pm_10_0 = 301 + (int)(0.5 + (pm_10_0 - 425.0)*((500.0 - 301.0)/(604.0 - 425.0)));
+
+      if (aqi_pm_2_5 > aqi_pm_10_0) return float(aqi_pm_2_5);
+      return float(aqi_pm_10_0);
+    # unit_of_measurement: AQI
+    device_class: aqi
+    state_class: measurement
+    update_interval: 10s
+    accuracy_decimals: 0
+
+    # Bluetooth Proxy status
+  - platform: template
+    name: ${prefixname} Bluetooth Proxy Connections Limit
+    id: bluetooth_proxy_connections_limit
+    icon: "mdi:bluetooth-settings"
+    update_interval: 30s
+    entity_category: "diagnostic"
+    lambda: |-
+      int limit = bluetooth_proxy::global_bluetooth_proxy->get_bluetooth_connections_limit();
+      ESP_LOGD("bluetooth_proxy_sensor", "Current connections limit => %d", limit);
+      return limit;
+    accuracy_decimals: 0
+  - platform: template
+    name: ${prefixname} Bluetooth Proxy Connections Free
+    id: bluetooth_proxy_connections_free
+    icon: "mdi:bluetooth-settings"
+    update_interval: 30s
+    entity_category: "diagnostic"
+    lambda: |-
+      int free = bluetooth_proxy::global_bluetooth_proxy->get_bluetooth_connections_free();
+      ESP_LOGD("bluetooth_proxy_sensor", "Current connections free => %d", free);
+      return free;
+    accuracy_decimals: 0
+
+    # Temperature, humidity, CO2
+  - platform: scd4x
+    co2:
+      name: ${prefixname} CO2
+      state_class: measurement
+    temperature:
+      name: ${prefixname} Temperature
+      state_class: measurement
+    humidity:
+      name: ${prefixname} Humidity
+      state_class: measurement
+    ambient_pressure_compensation_source: bme_pressure # needs to be in mbar, but 1 mbar == 1 hPa, so whatever
+    temperature_offset: 0
+
+    # Uptime
+  - platform: uptime
+    name: ${prefixname} Uptime Sensor
+    id: ${prefixname}_uptime_sensor
+    update_interval: 10s
+    on_raw_value:
+      then:
+        - text_sensor.template.publish:
+            id: ${prefixname}_uptime_human
+            state: !lambda |-
+              int seconds = round(id(${prefixname}_uptime_sensor).raw_state);
+              int days = seconds / (24 * 3600);
+              seconds = seconds % (24 * 3600);
+              int hours = seconds / 3600;
+              seconds = seconds % 3600;
+              int minutes = seconds /  60;
+              seconds = seconds % 60;
+              return (
+                (days ? to_string(days) + "d" : "") +
+                (hours ? to_string(hours) + "h" : "") +
+                (minutes ? to_string(minutes) + "m" : "") +
+                (to_string(seconds) + "s")
+              ).c_str();
+
+# Uptime Text Sensor
+text_sensor:
+  - platform: template
+    name: ${prefixname} Uptime Human Readable
+    id: ${prefixname}_uptime_human
+    icon: mdi:clock-start
+
+
+
+
+# UI for manual calibration of CO2 sensor.  Enter calibration value
+# first, then press button.  Sensor should be in a stable environment 
+# (without, for example, someone breathing on it) near the other reference
+# sensor for at least 3 minutes.
+button:
+  - platform: template
+    name: ${prefixname} Force manual CO2 calibration
+    entity_category: "config"
+    on_press:
+      then:
+        - scd4x.perform_forced_calibration:
+            value: !lambda 'return id(${prefixname}_co2_cal).state;'
+
+number:
+  - platform: template
+    name: ${prefixname} CO2 calibration value
+    optimistic: true
+    min_value: 350
+    max_value: 4500
+    step: 1
+    id: ${prefixname}_co2_cal
+    icon: "mdi:molecule-co2"
+    entity_category: "config"
+
+# wired ethernet (cannot use both this and wifi)
+ethernet:
+  type: RTL8201
+  mdc_pin: GPIO16
+  mdio_pin: GPIO17
+  clk_mode: GPIO0_IN
+  phy_addr: 0
+  phy_registers:
+    - address: 0x10
+      value: 0x1FFA
+      page_id: 0x07
