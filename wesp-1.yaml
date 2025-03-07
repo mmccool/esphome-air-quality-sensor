@@ -53,6 +53,7 @@ sensor:
 
     # Particulate
   - platform: pmsa003i
+    setup_priority: -100 # delay startup since otherwise it will not work on cold start!
     pm_1_0:
       name: ${prefixname} PM1.0
     pm_2_5:
@@ -183,8 +184,17 @@ text_sensor:
     id: ${prefixname}_uptime_human
     icon: mdi:clock-start
 
-
-
+# Remote reboot, shutdown, and safe mode switches
+switch:
+  - platform: restart
+    name: Restart
+    id: ${prefixname}_restart
+  - platform: safe_mode
+    name: Restart (Safe Mode)
+    id: ${prefixname}_restart_safe
+  - platform: shutdown
+    name: Shutdown
+    id: ${prefixname}_shutdown
 
 # UI for manual calibration of CO2 sensor.  Enter calibration value
 # first, then press button.  Sensor should be in a stable environment 
