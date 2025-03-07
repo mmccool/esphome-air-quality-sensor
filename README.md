@@ -11,6 +11,7 @@ huge values.  This seems to be a start-up timing issue, as reinstalling the code
 I think the PM sensor just needs time to warm up before the ESP32 trys to use it, and the ESPHome code is not waiting long enough before giving up on it.
 
 To do: 
+- <strike>Fix startup issue with PM sensor</strike>
 - Document required hardware BOM
 - Tweak sampling rates to increase life of PM sensor
 - Add a gas sensor for CO, Ozone, VOC, etc.
