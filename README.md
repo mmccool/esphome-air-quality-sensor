@@ -7,7 +7,7 @@ Radio is used as a bluetooth Proxy (allowing, for example, access to data from n
 Case design is up to you.  I smacked something together with Makeblock, a scrap of wood, and some window screen (to camoflauge it a bit while still allowing free airflow).
 
 To do: 
-- <strike>Fix startup issue with PM sensor</strike>
+- <strike>Fix cold start issue with PM sensor</strike>
 - Document required hardware BOM
 - Tweak sampling rates to increase life of PM sensor
 - Add a gas sensor for CO, Ozone, VOC, etc.
